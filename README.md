@@ -29,9 +29,8 @@ model->load("path/to/hrnetv2_model");
 
 // Run inference
 cv::Mat input_image = cv::imread("image.jpg");
-cv::Rect bbox = hand_bbox; //(example: detected hand BBox)
 
-auto model_input = rzv_model::ModelInput{input_image, bbox};
+auto model_input = rzv_model::ModelInput{input_image, cv::Rect(0, 0, input_image.cols, input_image.rows)};
 
 auto model_result = model->run<rzv_model::KeyPointResult>(model_input);
 
