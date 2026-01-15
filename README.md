@@ -11,11 +11,14 @@ The classes in this package are intended to be used through the `rzv_model::Base
 ## Features
 
 * HRNetV2 human pose-estimation model support
-* Implements ``rzv_model::RTMPoseModel`` deriving from ``rzv_model::BaseModel``
+* Implements ``rzv_model::HRNetV2Model`` deriving from ``rzv_model::BaseModel``
 
 ## Usage
 
-For preparing the AI model files and converting to the DRP-AI compatible format, please refer to the ``TBD`` documentation.
+For preparing the AI model files and converting to the DRP-AI compatible format, please refer to the:
+- [MMPose Model Zoo](https://github.com/open-mmlab/mmpose)
+- [How to convert MMPose models for V2H](https://github.com/renesas-rz/rzv_drp-ai_tvm/blob/main/docs/model_list/how_to_convert/How_to_convert_mmpose_models_V2H.md)
+
 
 ### Basic HRNetV2 model
 ```cpp
@@ -27,12 +30,18 @@ auto model = std::make_unique<rzv_model::HRNetV2Model>();
 // Load model
 model->load("path/to/hrnetv2_model");
 
+// Process image
+cv::Mat bgr_image = cv::imread("image.png");
+// Convert BGR → RGBA
+cv::Mat rgba_image;
+cv::cvtColor(bgr_image, rgba_image, cv::COLOR_BGR2RGBA);
+// Convert RGBA → YUV422 YUYV
+cv::Mat yuv422_image = rzv_model::Utils::rgba_to_yuv422(rgba_image, rzv_model::YUV422Format::YUYV);
+
 // Run inference
-cv::Mat input_image = cv::imread("image.jpg");
+auto input = rzv_model::ModelInput{yuv422_image, cv::Rect(0, 0, yuv422_image.cols, yuv422_image.rows)};
 
-auto model_input = rzv_model::ModelInput{input_image, cv::Rect(0, 0, input_image.cols, input_image.rows)};
-
-auto model_result = model->run<rzv_model::KeyPointResult>(model_input);
+auto result = model->run<rzv_model::KeyPointResult>(input);
 
 // Process results
 if (result && !result->keypoints.empty()) {
@@ -44,9 +53,17 @@ if (result && !result->keypoints.empty()) {
 
 ```
 
+## ROS2 Integration
+This package optionally provides a CMake integration module to simplify usage in ROS2
+packages. When enabled, the exported CMake files allow other ROS2 nodes to link against
+this model framework using `find_package(rzv_hrnetv2)` and `ament_target_dependencies`.
+
+It can also be built as a standalone C++ library using
+make or CMake when ROS2 dependencies (ament and other ROS packages) are removed.
+
+
 ## Dependencies
 
-- rclcpp
 - rzv_model (base model interface)
 - OpenCV
 
