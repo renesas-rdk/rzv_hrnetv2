@@ -31,7 +31,7 @@ public:
 
 HRNetV2Model::HRNetV2Model() : BaseModel(), pimpl_(std::make_unique<Impl>())
 {
-  RCLCPP_INFO(get_logger(), "HRNetV2 model instance created with default settings");
+  MODEL_INFO("HRNetV2 model instance created with default settings");
 }
 
 HRNetV2Model::~HRNetV2Model() = default;
@@ -52,7 +52,7 @@ void HRNetV2Model::extract_model_specific_shapes(const ModelShapeInfo & shape_in
       pimpl_->output_height = output_shape[1];
       pimpl_->output_width = output_shape[2];
     } else {
-      RCLCPP_ERROR(get_logger(), "Unexpected output shape size: %zu", output_shape.size());
+      MODEL_ERROR("Unexpected output shape size: {}", output_shape.size());
     }
   }
 }
@@ -77,7 +77,7 @@ std::unique_ptr<ModelResult> HRNetV2Model::postprocess(const std::vector<cv::Mat
 
   // Check if we have any output tensors
   if (output_tensors.empty()) {
-    RCLCPP_ERROR(get_logger(), "No output tensors received from model");
+    MODEL_ERROR("No output tensors received from model");
     return result;
   }
 
@@ -90,11 +90,11 @@ std::unique_ptr<ModelResult> HRNetV2Model::postprocess(const std::vector<cv::Mat
 
   // Validate the shape of the tensor
   if (heatmaps.empty()) {
-    RCLCPP_ERROR(get_logger(), "Empty heatmaps tensor");
+    MODEL_ERROR("Empty heatmaps tensor");
     return result;
   }
 
-  RCLCPP_DEBUG(get_logger(), "Processing heatmaps tensor with dims=%d", heatmaps.dims);
+  MODEL_DEBUG("Processing heatmaps tensor with dims={}", heatmaps.dims);
 
   // Process each joint heatmap
   float lowest_score = 1.0f;
@@ -118,7 +118,7 @@ std::unique_ptr<ModelResult> HRNetV2Model::postprocess(const std::vector<cv::Mat
       // If 3D tensor [joints, height, width], extract the correct slice
       heatmap = cv::Mat(heatmap_height, heatmap_width, CV_32F, (void *)heatmaps.ptr<float>(joint));
     } else {
-      RCLCPP_ERROR(get_logger(), "Unexpected heatmap tensor format: dims=%d", heatmaps.dims);
+      MODEL_ERROR("Unexpected heatmap tensor format: dims={}", heatmaps.dims);
       continue;
     }
 
@@ -156,8 +156,8 @@ std::unique_ptr<ModelResult> HRNetV2Model::postprocess(const std::vector<cv::Mat
     kp.y = mapped_point.y;
     kp.confidence = static_cast<float>(max_val);
 
-    RCLCPP_DEBUG(
-      get_logger(), "Detected keypoint %d at (%.1f, %.1f) with confidence %.2f", joint, kp.x, kp.y,
+    MODEL_DEBUG(
+      "Detected keypoint {} at ({}, {}) with confidence {}", joint, kp.x, kp.y,
       kp.confidence);
 
     lowest_score = std::min(lowest_score, kp.confidence);
@@ -165,7 +165,7 @@ std::unique_ptr<ModelResult> HRNetV2Model::postprocess(const std::vector<cv::Mat
 
   // Set overall score based on confidence values
   result->score = lowest_score;
-  RCLCPP_DEBUG(get_logger(), "Keypoints detected with overall score: %.2f", result->score);
+  MODEL_DEBUG("Keypoints detected with overall score: {}", result->score);
 
   return result;
 }
